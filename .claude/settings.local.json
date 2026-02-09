@@ -1,0 +1,53 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(more:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(npm install:*)",
+      "Bash(ls \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Web\\\\backRest\\\\sql\"\" | grep -E \"caja)",
+      "Bash(factura:*)",
+      "Bash(modos \")",
+      "Bash(xargs:*)",
+      "Bash(wc:*)",
+      "WebSearch",
+      "WebFetch(domain:marosavat.com)",
+      "WebFetch(domain:seoxan.es)",
+      "Bash(npx tsc:*)",
+      "Bash(PGPASSWORD=fisio1109 psql:*)",
+      "Bash(node run_migration.js:*)",
+      "Bash(node:*)",
+      "Bash(set PGPASSWORD=fisio1109)",
+      "Bash(psql:*)",
+      "Bash(where:*)",
+      "Bash(tasklist:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c \"taskkill /PID 37968 /F\")",
+      "Bash(powershell:*)",
+      "Bash(curl:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJtYXN0ZXIiLCJ1c2VybmFtZSI6IkRhVmluY2kiLCJyb2xlIjoibWFzdGVyIiwiZGF0YWJhc2VzIjpbeyJpZCI6MSwibm9tYnJlIjoiRW1wcmVzYSBQcmluY2lwYWwiLCJkYk5hbWUiOiJnZXN0aW9fZGIiLCJyb2wiOiJhZG1pbiJ9XSwiY3VycmVudERhdGFiYXNlIjoiZ2VzdGlvX2RiIiwiaWF0IjoxNzY5NjE5MjkxLCJleHAiOjE3Njk3MDU2OTF9.Taf32hVPKDYfe2pl4pEo9NQlKGRlfxZBEy5CwOwLl_s\")",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJtYXN0ZXIiLCJ1c2VybmFtZSI6IkRhVmluY2kiLCJyb2xlIjoibWFzdGVyIiwiZGF0YWJhc2VzIjpbeyJpZCI6MSwibm9tYnJlIjoiRW1wcmVzYSBQcmluY2lwYWwiLCJkYk5hbWUiOiJnZXN0aW9fZGIiLCJyb2wiOiJhZG1pbiJ9XSwiY3VycmVudERhdGFiYXNlIjoiZ2VzdGlvX2RiIiwiaWF0IjoxNzY5NjIwMTc3LCJleHAiOjE3Njk3MDY1Nzd9.NpRHG_3WXpVthoFZxEJ7Z8ew95QSUzDHmeXFhAXuIHA\")",
+      "Bash(__NEW_LINE_77d862c0f368676e__ curl -s http://localhost:8080/api/auth/me -H \"Authorization: Bearer $TOKEN\" -H \"X-Database: gestio_db\")",
+      "Bash(ls -la \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Web\\\\Front\\\\optica-front\\\\app\\\\routes\"\" | grep -E \"venta)",
+      "Bash(presupuesto \")",
+      "Bash(ls -la \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Web\\\\Front\\\\optica-front\\\\app\\\\routes\\\\ventas\"\" 2>/dev/null || ls -la \"C:UsersusuarioDesktopWebFrontoptica-frontapproutes\"\")",
+      "Bash(tree:*)",
+      "Bash(del \"C:\\\\Users\\\\usuario\\\\Desktop\\\\Web\\\\backRest\\\\scripts\\\\run-migration.js\")",
+      "Bash(npx tsx:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker cp:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\usuario\\Desktop\\Web\\Front\\optica-front"
+    ]
+  }
+}

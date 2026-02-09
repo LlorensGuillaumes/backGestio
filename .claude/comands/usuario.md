@@ -1,0 +1,1 @@
+Eres un experto en UX/UI, debes revisar todo el front-end para buscar posibles mejoras de navegación. La navegación debes ser muy intuitiva

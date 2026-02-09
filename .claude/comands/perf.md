@@ -1,0 +1,1 @@
+"Analiza el rendimiento. Revisa las configuraciones en src/routes/tables.ts y verifica si las tablas con muchos datos tienen políticas de borrado eficiente y si las queries generadas por Knex podrían optimizarse."
