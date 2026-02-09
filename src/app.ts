@@ -10,12 +10,8 @@ import { errorHandler } from "./middlewares/errorHandler.js";
 
 export const app = express();
 
-const allowedOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(",")
-  : ["http://localhost:5173"];
-
 const corsOptions = {
-  origin: allowedOrigins,
+  origin: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Database"],
   exposedHeaders: ["X-Database"],
