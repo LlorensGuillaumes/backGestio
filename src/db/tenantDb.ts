@@ -54,6 +54,7 @@ export async function getTenantDb(dbName: string): Promise<Knex | null> {
       user: process.env.DB_USER ?? 'postgres',
       password: process.env.DB_PASSWORD ?? '',
       database: config.dbName,
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     },
     pool: {
       min: 1,
@@ -106,6 +107,7 @@ export function getDefaultDb(): Knex {
         user: process.env.DB_USER ?? 'postgres',
         password: process.env.DB_PASSWORD ?? '',
         database: defaultDbName,
+        ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
       },
       pool: {
         min: 2,

@@ -17,6 +17,7 @@ export function getMasterDb(): Knex {
         user: process.env.DB_USER ?? 'postgres',
         password: process.env.DB_PASSWORD ?? '',
         database: process.env.MASTER_DB_NAME ?? 'gestio_master',
+        ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
       },
       pool: {
         min: 2,
