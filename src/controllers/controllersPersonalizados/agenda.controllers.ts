@@ -25,13 +25,13 @@ export async function getCitas(req: Request, res: Response, next: NextFunction) 
       .leftJoin("cliente_persona as cp", "cl.id", "cp.id_cliente")
       .leftJoin("cliente_empresa as ce", "cl.id", "ce.id_cliente")
       .leftJoin("clientes_telefonos as ct", function () {
-        this.on("cl.id", "=", "ct.id_cliente").andOn("ct.es_principal", "=", db.raw("?", [1]));
+        this.on("cl.id", "=", "ct.id_cliente").andOn("ct.es_principal", "=", db.raw("?", [true]));
       })
       .select(
         "c.*",
         "cl.id as clienteId",
         "ct.telefono as clienteTelefono",
-        "ce.email_contacto as clienteEmail",
+        db.raw(`NULL as "clienteEmail"`),
         db.raw(`
           CASE
             WHEN cl.tipo_cliente = 'P' THEN
@@ -90,13 +90,13 @@ export async function getCita(req: Request, res: Response, next: NextFunction) {
       .leftJoin("cliente_persona as cp", "cl.id", "cp.id_cliente")
       .leftJoin("cliente_empresa as ce", "cl.id", "ce.id_cliente")
       .leftJoin("clientes_telefonos as ct", function () {
-        this.on("cl.id", "=", "ct.id_cliente").andOn("ct.es_principal", "=", db.raw("?", [1]));
+        this.on("cl.id", "=", "ct.id_cliente").andOn("ct.es_principal", "=", db.raw("?", [true]));
       })
       .select(
         "c.*",
         "cl.id as clienteId",
         "ct.telefono as clienteTelefono",
-        "ce.email_contacto as clienteEmail",
+        db.raw(`NULL as "clienteEmail"`),
         db.raw(`
           CASE
             WHEN cl.tipo_cliente = 'P' THEN
@@ -404,7 +404,7 @@ export async function buscarClientes(req: Request, res: Response, next: NextFunc
       .leftJoin("cliente_persona as cp", "cl.id", "cp.id_cliente")
       .leftJoin("cliente_empresa as ce", "cl.id", "ce.id_cliente")
       .leftJoin("clientes_telefonos as ct", function () {
-        this.on("cl.id", "=", "ct.id_cliente").andOn("ct.es_principal", "=", db.raw("?", [1]));
+        this.on("cl.id", "=", "ct.id_cliente").andOn("ct.es_principal", "=", db.raw("?", [true]));
       })
       .select(
         "cl.id",
@@ -427,7 +427,7 @@ export async function buscarClientes(req: Request, res: Response, next: NextFunc
           END AS nombre
         `),
         "ct.telefono as telefono",
-        "ce.email_contacto as email"
+        db.raw(`NULL as "email"`)
       )
       .where("cl.activo", 1)
       .andWhere(function () {
@@ -436,7 +436,7 @@ export async function buscarClientes(req: Request, res: Response, next: NextFunc
           .orWhereRaw(`LOWER(COALESCE(cp.segundo_apellido, '')) LIKE ?`, [termino])
           .orWhereRaw(`LOWER(COALESCE(ce.razon_social, '')) LIKE ?`, [termino])
           .orWhereRaw(`LOWER(COALESCE(ct.telefono, '')) LIKE ?`, [termino])
-          .orWhereRaw(`LOWER(COALESCE(ce.email_contacto, '')) LIKE ?`, [termino]);
+          .orWhereRaw(`LOWER(COALESCE(ce.persona_contacto, '')) LIKE ?`, [termino]);
       })
       .limit(15);
 

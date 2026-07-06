@@ -1,6 +1,7 @@
 // src/controllers/controllersPersonalizados/proveedores.controllers.ts
 import type { Request, Response, NextFunction } from "express";
 import db from "../../db.js";
+import { ocultarBancarios } from "../../auth/datosBancarios.js";
 
 /**
  * GET /proveedores-full
@@ -155,13 +156,18 @@ export async function getProveedor(req: Request, res: Response, next: NextFuncti
         )
     ]);
 
-    res.json({
+    const resultado = {
       ...proveedor,
       telefonos,
       contactos,
       subfamilias,
       productos
-    });
+    };
+
+    // Oculta IBAN/titular/BIC si el usuario no tiene permiso de datos bancarios
+    await ocultarBancarios(req, resultado, "proveedores.datos_bancarios");
+
+    res.json(resultado);
   } catch (err) {
     next(err);
   }
@@ -225,6 +231,9 @@ export async function postProveedor(req: Request, res: Response, next: NextFunct
         Email: input.email || input.Email || null,
         Web: input.web || input.Web || null,
         Observaciones: input.observaciones || input.Observaciones || null,
+        Iban: input.iban || input.Iban || null,
+        TitularCuenta: input.titularCuenta || input.TitularCuenta || null,
+        Bic: input.bic || input.Bic || null,
         Activo: 1,
       };
 
@@ -318,6 +327,12 @@ export async function putProveedor(req: Request, res: Response, next: NextFuncti
         proveedorData.Web = input.web || input.Web;
       if (input.observaciones !== undefined || input.Observaciones !== undefined)
         proveedorData.Observaciones = input.observaciones || input.Observaciones;
+      if (input.iban !== undefined || input.Iban !== undefined)
+        proveedorData.Iban = input.iban || input.Iban || null;
+      if (input.titularCuenta !== undefined || input.TitularCuenta !== undefined)
+        proveedorData.TitularCuenta = input.titularCuenta || input.TitularCuenta || null;
+      if (input.bic !== undefined || input.Bic !== undefined)
+        proveedorData.Bic = input.bic || input.Bic || null;
 
       if (Object.keys(proveedorData).length > 0) {
         await trx("Proveedores").where("IdProveedor", id).update(proveedorData);

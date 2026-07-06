@@ -1,6 +1,17 @@
 // src/controllers/controllersPersonalizados/profesionales.controllers.ts
 import type { Request, Response, NextFunction } from "express";
 import db from "../../db.js";
+import { getMasterDb } from "../../db/masterDb.js";
+
+// Resuelve datos del trabajador (master) para un conjunto de IdUsuario
+async function trabajadoresMap(ids: number[]) {
+  const limpios = [...new Set(ids.filter(Boolean))];
+  if (!limpios.length) return new Map<number, any>();
+  const rows = await getMasterDb()("usuarios")
+    .whereIn("id", limpios)
+    .select("id", "nombre", "tipo_relacion", "iban");
+  return new Map(rows.map((r: any) => [Number(r.id), r]));
+}
 
 /**
  * GET /profesionales
@@ -13,19 +24,28 @@ export async function getProfesionales(req: Request, res: Response, next: NextFu
     let query = db("Profesionales").orderBy("NombreCompleto", "asc");
 
     if (soloActivos) {
-      query = query.where("Activo", 1);
+      query = query.where("Activo", true);
     }
 
     const rows = await query;
 
+    // Resolver el trabajador vinculado (de la BD master)
+    const trabMap = await trabajadoresMap(rows.map((p: any) => Number(p.IdUsuario)));
+
     // Mapear a camelCase
-    const profesionales = rows.map((p: any) => ({
-      id: p.IdProfesional,
-      nombreCompleto: p.NombreCompleto,
-      especialidad: p.Especialidad,
-      numColegiado: p.NumColegiado,
-      activo: p.Activo === 1,
-    }));
+    const profesionales = rows.map((p: any) => {
+      const t = p.IdUsuario ? trabMap.get(Number(p.IdUsuario)) : null;
+      return {
+        id: p.IdProfesional,
+        nombreCompleto: p.NombreCompleto,
+        especialidad: p.Especialidad,
+        numColegiado: p.NumColegiado,
+        idUsuario: p.IdUsuario ?? null,
+        nombreTrabajador: t?.nombre ?? null,
+        tipoRelacion: t?.tipo_relacion ?? null,
+        activo: !!p.Activo,
+      };
+    });
 
     res.json({ rows: profesionales, totalCount: profesionales.length });
   } catch (err) {
@@ -50,12 +70,16 @@ export async function getProfesional(req: Request, res: Response, next: NextFunc
       return res.status(404).json({ error: "Profesional no encontrado" });
     }
 
+    const t = row.IdUsuario ? (await trabajadoresMap([Number(row.IdUsuario)])).get(Number(row.IdUsuario)) : null;
     res.json({
       id: row.IdProfesional,
       nombreCompleto: row.NombreCompleto,
       especialidad: row.Especialidad,
       numColegiado: row.NumColegiado,
-      activo: row.Activo === 1,
+      idUsuario: row.IdUsuario ?? null,
+      nombreTrabajador: t?.nombre ?? null,
+      tipoRelacion: t?.tipo_relacion ?? null,
+      activo: !!row.Activo,
     });
   } catch (err) {
     next(err);
@@ -68,7 +92,7 @@ export async function getProfesional(req: Request, res: Response, next: NextFunc
  */
 export async function createProfesional(req: Request, res: Response, next: NextFunction) {
   try {
-    const { nombreCompleto, especialidad, numColegiado, activo } = req.body;
+    const { nombreCompleto, especialidad, numColegiado, idUsuario, activo } = req.body;
 
     if (!nombreCompleto?.trim()) {
       return res.status(400).json({ error: "El nombre completo es obligatorio" });
@@ -79,7 +103,8 @@ export async function createProfesional(req: Request, res: Response, next: NextF
         NombreCompleto: nombreCompleto.trim(),
         Especialidad: especialidad?.trim() || null,
         NumColegiado: numColegiado?.trim() || null,
-        Activo: activo !== false ? 1 : 0,
+        IdUsuario: idUsuario || null,
+        Activo: activo !== false,
         FechaCreacion: new Date(),
       })
       .returning("IdProfesional");
@@ -109,11 +134,13 @@ export async function updateProfesional(req: Request, res: Response, next: NextF
       return res.status(400).json({ error: "Id de profesional inválido" });
     }
 
-    const { nombreCompleto, especialidad, numColegiado, activo } = req.body;
+    const { nombreCompleto, especialidad, numColegiado, idUsuario, activo } = req.body;
 
     const updateData: Record<string, any> = {
       FechaModificacion: new Date(),
     };
+
+    if (idUsuario !== undefined) updateData.IdUsuario = idUsuario || null;
 
     if (nombreCompleto !== undefined) {
       if (!nombreCompleto?.trim()) {
@@ -150,7 +177,7 @@ export async function updateProfesional(req: Request, res: Response, next: NextF
       nombreCompleto: row.NombreCompleto,
       especialidad: row.Especialidad,
       numColegiado: row.NumColegiado,
-      activo: row.Activo === 1,
+      activo: !!row.Activo,
     });
   } catch (err) {
     next(err);
@@ -171,7 +198,7 @@ export async function deleteProfesional(req: Request, res: Response, next: NextF
     // Baja lógica (desactivar)
     const updated = await db("Profesionales")
       .where("IdProfesional", id)
-      .update({ Activo: 0, FechaModificacion: new Date() });
+      .update({ Activo: false, FechaModificacion: new Date() });
 
     if (updated === 0) {
       return res.status(404).json({ error: "Profesional no encontrado" });

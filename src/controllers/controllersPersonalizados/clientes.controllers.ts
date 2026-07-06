@@ -4,6 +4,7 @@ import { tables } from "../../routes/tables.js";
 import * as crudService from "../../crud/crudService.js";
 import type { TableConfig } from "../../crud/types.js";
 import db from "../../db.js";
+import { ocultarBancarios } from "../../auth/datosBancarios.js";
 
 // ✅ Helper que garantiza TableConfig (nunca undefined)
 function getClientesCfg(): TableConfig {
@@ -86,6 +87,9 @@ export async function getCliente(req: Request, res: Response, next: NextFunction
     );
 
     if (!item) return res.status(404).json({ error: "Cliente no encontrado" });
+
+    // Oculta IBAN/titular/BIC si el usuario no tiene permiso de datos bancarios
+    await ocultarBancarios(req, item, "clientes.datos_bancarios");
 
     res.json(item);
   } catch (err) {

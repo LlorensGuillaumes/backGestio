@@ -24,6 +24,7 @@ export async function getServiciosFull(req: Request, res: Response, next: NextFu
         "s.PVP",
         "s.PrecioCoste",
         "s.PorcentajeIva",
+        "s.ImporteMatricula",
         "s.DuracionMinutos",
         "s.RequiereCita",
         "s.Observaciones",
@@ -130,6 +131,7 @@ export async function getServicio(req: Request, res: Response, next: NextFunctio
       PVP: servicio.PVP,
       PrecioCoste: servicio.PrecioCoste,
       PorcentajeIva: servicio.PorcentajeIva,
+      ImporteMatricula: servicio.ImporteMatricula,
       DuracionMinutos: servicio.DuracionMinutos,
       RequiereCita: servicio.RequiereCita,
       Observaciones: servicio.Observaciones,
@@ -154,6 +156,7 @@ export async function createServicio(req: Request, res: Response, next: NextFunc
       pvp,
       precioCoste,
       porcentajeIva,
+      importeMatricula,
       duracionMinutos,
       requiereCita,
       observaciones,
@@ -175,6 +178,7 @@ export async function createServicio(req: Request, res: Response, next: NextFunc
           PVP: pvp ?? 0,
           PrecioCoste: precioCoste ?? 0,
           PorcentajeIva: porcentajeIva ?? 21,
+          ImporteMatricula: importeMatricula ?? 0,
           DuracionMinutos: duracionMinutos ?? 0,
           RequiereCita: requiereCita ?? false,
           Observaciones: observaciones?.trim() || null,
@@ -223,6 +227,7 @@ export async function updateServicio(req: Request, res: Response, next: NextFunc
       pvp,
       precioCoste,
       porcentajeIva,
+      importeMatricula,
       duracionMinutos,
       requiereCita,
       observaciones,
@@ -247,6 +252,7 @@ export async function updateServicio(req: Request, res: Response, next: NextFunc
       if (pvp !== undefined) updateData.PVP = pvp;
       if (precioCoste !== undefined) updateData.PrecioCoste = precioCoste;
       if (porcentajeIva !== undefined) updateData.PorcentajeIva = porcentajeIva;
+      if (importeMatricula !== undefined) updateData.ImporteMatricula = importeMatricula;
       if (duracionMinutos !== undefined) updateData.DuracionMinutos = duracionMinutos;
       if (requiereCita !== undefined) updateData.RequiereCita = requiereCita;
       if (observaciones !== undefined) updateData.Observaciones = observaciones?.trim() || null;

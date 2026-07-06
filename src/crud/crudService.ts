@@ -96,7 +96,7 @@ export async function listClientes(
       this.on("c.id", "=", "ct.id_cliente").andOn(
         "ct.es_principal",
         "=",
-        db.raw("?", [1])
+        db.raw("?", [true])
       );
     })
     .select(
@@ -185,7 +185,7 @@ export async function getOneCliente(
       this.on("c.id", "=", "ct.id_cliente").andOn(
         "ct.es_principal",
         "=",
-        db.raw("?", [1])
+        db.raw("?", [true])
       );
     })
     .select(
@@ -201,9 +201,9 @@ export async function getOneCliente(
 
       // empresa (opcional)
       "ce.razon_social as e_razon_social",
-      "ce.nombre_fiscal as e_nombre_fiscal",
+      db.raw("ce.nombre_comercial as e_nombre_fiscal"),
       "ce.persona_contacto as e_persona_contacto",
-      "ce.email_contacto as e_email_contacto",
+      db.raw("NULL::varchar as e_email_contacto"),
 
       // nombreCompleto
       db.raw(`
@@ -308,6 +308,8 @@ type PersonaIn = {
 type EmpresaIn = {
   razonSocial?: string | null;
   nombreFiscal?: string | null;
+  nombreComercial?: string | null;
+  cif?: string | null;
   contacto?: string | null; // en tu front viene "contacto"
   personaContacto?: string | null; // por si llega así
   email?: string | null;
@@ -323,8 +325,19 @@ export type ClienteWritePayload = {
   direccion?: string | null;
   codigo_postal?: string | null;
   poblacion?: string | null;
+  provincia?: string | null;
   pais?: string | null;
+  email?: string | null;
+  telefono?: string | null;
+  telefonoMovil?: string | null;
+  telefono1?: string | null;
+  telefono2?: string | null;
   activo?: boolean;
+
+  iban?: string | null;
+  titular_cuenta?: string | null;
+  titularCuenta?: string | null;
+  bic?: string | null;
 
   persona?: PersonaIn | null;
   empresa?: EmpresaIn | null;
@@ -363,8 +376,17 @@ function normalizeClienteWrite(body: ClienteWritePayload) {
   const direccion = s(body.direccion);
   const codigo_postal = s(body.codigo_postal);
   const poblacion = s(body.poblacion);
+  const provincia = s(body.provincia);
   const pais = s(body.pais) ?? "España";
+  const email = s(body.email);
+  const telefono1 = s(body.telefono1 ?? body.telefono);
+  const telefono2 = s(body.telefono2 ?? body.telefonoMovil);
   const activo = body.activo == null ? true : Boolean(body.activo);
+
+  // Datos bancarios del alumno (cuando es mayor y paga él mismo)
+  const iban = s(body.iban);
+  const titular_cuenta = s(body.titular_cuenta ?? body.titularCuenta);
+  const bic = s(body.bic);
 
   const persona = body.persona ?? null;
   const empresa = body.empresa ?? null;
@@ -391,7 +413,14 @@ function normalizeClienteWrite(body: ClienteWritePayload) {
     codigo_postal,
     poblacion,
     pais,
+    provincia,
+    email,
+    telefono1,
+    telefono2,
     activo,
+    iban,
+    titular_cuenta,
+    bic,
     persona,
     empresa,
     telefonos,
@@ -421,8 +450,7 @@ async function replaceTelefonos(trx: any, idCliente: number, telefonos: { telefo
   const rows = telefonos.map((t, idx) => ({
     id_cliente: idCliente,
     telefono: t.telefono,
-    extension: t.extension,
-    es_principal: idx === 0 ? 1 : 0, // tú lo comparas con 1 en el join
+    es_principal: idx === 0, // boolean (columna es_principal es boolean)
   }));
 
   await trx("clientes_telefonos").insert(rows);
@@ -468,22 +496,23 @@ async function upsertPersonaEmpresa(trx: any, idCliente: number, p: ReturnType<t
   await trx("cliente_persona").where({ id_cliente: idCliente }).del();
 
   const personaContacto = s(p.empresa?.contacto ?? p.empresa?.personaContacto);
-  const emailContacto = s(p.empresa?.email ?? p.empresa?.emailContacto);
+  const nombreComercial = s(p.empresa?.nombreFiscal ?? p.empresa?.nombreComercial);
+  const cif = s(p.empresa?.cif ?? p.documento_fiscal);
 
   await trx("cliente_empresa")
     .insert({
       id_cliente: idCliente,
       razon_social: s(p.empresa?.razonSocial),
-      nombre_fiscal: s(p.empresa?.nombreFiscal),
+      nombre_comercial: nombreComercial,
+      cif,
       persona_contacto: personaContacto,
-      email_contacto: emailContacto,
     })
     .onConflict("id_cliente")
     .merge({
       razon_social: s(p.empresa?.razonSocial),
-      nombre_fiscal: s(p.empresa?.nombreFiscal),
+      nombre_comercial: nombreComercial,
+      cif,
       persona_contacto: personaContacto,
-      email_contacto: emailContacto,
     });
 }
 
@@ -497,12 +526,19 @@ export async function createCliente(cfg: TableConfig, body: ClienteWritePayload)
         tipo_cliente: p.tipo_cliente,
         documento_fiscal: p.documento_fiscal,
         nombre_comercial: p.nombre_comercial,
-        es_cliente_factura_simplificada: p.es_cliente_factura_simplificada,
+        es_factura_simplificada: p.es_cliente_factura_simplificada,
         direccion: p.direccion,
         codigo_postal: p.codigo_postal,
         poblacion: p.poblacion,
+        provincia: p.provincia,
         pais: p.pais,
-        activo: p.activo,
+        email: p.email,
+        telefono1: p.telefono1,
+        telefono2: p.telefono2,
+        activo: p.activo ? 1 : 0,
+        iban: p.iban,
+        titular_cuenta: p.titular_cuenta,
+        bic: p.bic,
       })
       .returning(["id"]);
 
@@ -537,12 +573,19 @@ export async function updateCliente(cfg: TableConfig, idCliente: number, body: C
         tipo_cliente: p.tipo_cliente,
         documento_fiscal: p.documento_fiscal,
         nombre_comercial: p.nombre_comercial,
-        es_cliente_factura_simplificada: p.es_cliente_factura_simplificada,
+        es_factura_simplificada: p.es_cliente_factura_simplificada,
         direccion: p.direccion,
         codigo_postal: p.codigo_postal,
         poblacion: p.poblacion,
+        provincia: p.provincia,
         pais: p.pais,
-        activo: p.activo,
+        email: p.email,
+        telefono1: p.telefono1,
+        telefono2: p.telefono2,
+        activo: p.activo ? 1 : 0,
+        iban: p.iban,
+        titular_cuenta: p.titular_cuenta,
+        bic: p.bic,
       });
 
     await upsertPersonaEmpresa(trx, idCliente, p);

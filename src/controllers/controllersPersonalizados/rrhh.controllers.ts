@@ -4,6 +4,31 @@
 
 import type { Request, Response, NextFunction } from "express";
 import { getMasterDb } from "../../db/masterDb.js";
+import { ocultarBancarios } from "../../auth/datosBancarios.js";
+
+// Sincroniza el trabajador con la tabla Proveedores de la empresa actual:
+// AUTÓNOMO → crea/actualiza su proveedor; NÓMINA → desactiva el proveedor vinculado.
+async function sincronizarProveedorTrabajador(u: any) {
+  try {
+    if (u?.tipo_relacion === "AUTONOMO") {
+      const existe = await db("Proveedores").where("IdUsuario", u.id).first();
+      if (existe) {
+        await db("Proveedores").where("IdProveedor", existe.IdProveedor)
+          .update({ Nombre: u.nombre, NIF: u.dni ?? null, Iban: u.iban ?? null, Email: u.email ?? null, Activo: 1 });
+      } else {
+        await db("Proveedores").insert({
+          Nombre: u.nombre, NombreComercial: u.nombre, NIF: u.dni ?? null,
+          Iban: u.iban ?? null, Email: u.email ?? null, IdUsuario: u.id, Activo: 1,
+        });
+      }
+    } else {
+      // Ya no es autónomo: desactivar su proveedor (si existe)
+      await db("Proveedores").where("IdUsuario", u.id).update({ Activo: 0 });
+    }
+  } catch (e) {
+    console.warn("No se pudo sincronizar el proveedor del trabajador:", e);
+  }
+}
 import db from "../../db.js"; // Para FestivosEmpresa (está en gestio_db)
 
 const masterDb = getMasterDb();
@@ -184,6 +209,15 @@ export async function getUsuarioTrabajador(req: Request, res: Response, next: Ne
         "u.fecha_alta",
         "u.fecha_baja",
         "u.observaciones",
+        "u.tipo_relacion",
+        "u.iban",
+        "u.titular_cuenta",
+        "u.bic",
+        "u.salario_base",
+        "u.pct_irpf",
+        "u.pct_ss",
+        "u.num_pagas",
+        "u.complementos",
         "u.activo"
       )
       .first();
@@ -191,6 +225,9 @@ export async function getUsuarioTrabajador(req: Request, res: Response, next: Ne
     if (!usuario) {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
+
+    // Oculta IBAN/titular/BIC si el usuario no tiene permiso de datos bancarios
+    await ocultarBancarios(req, usuario, "trabajadores.datos_bancarios");
 
     res.json(usuario);
   } catch (err) {
@@ -217,6 +254,10 @@ export async function putUsuarioTrabajador(req: Request, res: Response, next: Ne
       fecha_alta,
       fecha_baja,
       observaciones,
+      tipo_relacion,
+      iban,
+      titular_cuenta,
+      bic,
     } = req.body;
 
     const updateData: Record<string, any> = { updated_at: new Date() };
@@ -228,6 +269,15 @@ export async function putUsuarioTrabajador(req: Request, res: Response, next: Ne
     if (fecha_alta !== undefined) updateData.fecha_alta = fecha_alta || null;
     if (fecha_baja !== undefined) updateData.fecha_baja = fecha_baja || null;
     if (observaciones !== undefined) updateData.observaciones = observaciones?.trim() || null;
+    if (tipo_relacion !== undefined) updateData.tipo_relacion = tipo_relacion || "NOMINA";
+    if (iban !== undefined) updateData.iban = iban?.trim() || null;
+    if (titular_cuenta !== undefined) updateData.titular_cuenta = titular_cuenta?.trim() || null;
+    if (bic !== undefined) updateData.bic = bic?.trim() || null;
+    if (req.body.salario_base !== undefined) updateData.salario_base = Number(req.body.salario_base) || 0;
+    if (req.body.pct_irpf !== undefined) updateData.pct_irpf = Number(req.body.pct_irpf) || 0;
+    if (req.body.pct_ss !== undefined) updateData.pct_ss = Number(req.body.pct_ss) || 0;
+    if (req.body.num_pagas !== undefined) updateData.num_pagas = Number(req.body.num_pagas) || 12;
+    if (req.body.complementos !== undefined) updateData.complementos = JSON.stringify(req.body.complementos ?? []);
 
     const [updated] = await masterDb("usuarios")
       .where("id", id)
@@ -237,6 +287,9 @@ export async function putUsuarioTrabajador(req: Request, res: Response, next: Ne
     if (!updated) {
       return res.status(404).json({ error: "Usuario no encontrado" });
     }
+
+    // Sincroniza con Proveedores (autónomo ⇄ proveedor) en la empresa actual
+    await sincronizarProveedorTrabajador(updated);
 
     res.json(updated);
   } catch (err) {

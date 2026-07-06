@@ -23,10 +23,17 @@ import { notificacionesRouter } from "./rutasPersonalizadas/notificaciones.route
 import { chatRouter } from "./rutasPersonalizadas/chat.routes.js";
 import { mensajesRouter } from "./rutasPersonalizadas/mensajes.routes.js";
 import { departamentosRouter } from "./rutasPersonalizadas/departamentos.routes.js";
+import { escolaRouter } from "./rutasPersonalizadas/escola.routes.js";
+import { contactosRouter } from "./rutasPersonalizadas/contactos.routes.js";
+import { facturacionMensualRouter } from "./rutasPersonalizadas/facturacionMensual.routes.js";
+import { sepaRouter } from "./rutasPersonalizadas/sepa.routes.js";
+import { descuentosRouter } from "./rutasPersonalizadas/descuentos.routes.js";
+import { nominasRouter } from "./rutasPersonalizadas/nominas.routes.js";
 import { authRouter } from "./authRoutes.js";
 import { userRouter } from "./userRoutes.js";
 import { adminRouter } from "./adminRoutes.js";
 import { authenticate } from "../middlewares/authenticate.js";
+import { tenantResolver } from "../middlewares/tenantResolver.js";
 
 export const apiRouter = Router();
 
@@ -46,6 +53,9 @@ apiRouter.use(adminRouter);
 // A partir de aquí, todas las rutas requieren autenticación
 // =========================================================
 apiRouter.use(authenticate);
+
+// Resuelve la BD del tenant (empresa) y la fija para toda la petición
+apiRouter.use(tenantResolver);
 
 // Rutas personalizadas (antes del CRUD genérico para tener prioridad)
 apiRouter.use(clientesRouter);
@@ -71,6 +81,12 @@ apiRouter.use(notificacionesRouter);
 apiRouter.use(chatRouter);
 apiRouter.use(mensajesRouter);
 apiRouter.use(departamentosRouter);
+apiRouter.use(escolaRouter);
+apiRouter.use(contactosRouter);
+apiRouter.use(facturacionMensualRouter);
+apiRouter.use(sepaRouter);
+apiRouter.use(descuentosRouter);
+apiRouter.use(nominasRouter);
 
 // Rutas CRUD generadas automáticamente
 apiRouter.use(generatedRouter);
