@@ -12,14 +12,13 @@ export async function initMasterDbTables(): Promise<void> {
       table.string('db_name', 100).notNullable().unique();
       table.string('db_host', 255).defaultTo('localhost');
       table.integer('db_port').defaultTo(5432);
-      table.string('serie_facturacion', 10).defaultTo('F'); // Serie para facturas de venta
+      table.string('serie_facturacion', 10).defaultTo('F');
       table.boolean('activa').defaultTo(true);
       table.timestamp('created_at').defaultTo(masterDb.fn.now());
       table.timestamp('updated_at').defaultTo(masterDb.fn.now());
     });
     console.log('Tabla bases_datos creada');
   } else {
-    // Añadir columna serie_facturacion si no existe
     const hasSerieFacturacion = await masterDb.schema.hasColumn('bases_datos', 'serie_facturacion');
     if (!hasSerieFacturacion) {
       await masterDb.schema.alterTable('bases_datos', (table) => {
@@ -44,7 +43,6 @@ export async function initMasterDbTables(): Promise<void> {
     });
     console.log('Tabla usuarios creada');
   } else {
-    // Añadir columnas faltantes a tabla existente
     const columns = ['password_hash', 'username', 'nombre', 'email', 'activo', 'created_at', 'updated_at'];
     for (const col of columns) {
       const hasColumn = await masterDb.schema.hasColumn('usuarios', col);
@@ -108,7 +106,6 @@ export async function initMasterDbTables(): Promise<void> {
     });
     console.log('Tabla menus creada');
 
-    // Insertar menús iniciales
     await masterDb('menus').insert([
       { codigo: 'ventas.clientes', nombre_es: 'Clientes', nombre_ca: 'Clients', grupo: 'ventas', orden: 1, requiere_modulo_optica: false },
       { codigo: 'ventas.caja', nombre_es: 'Caja', nombre_ca: 'Caixa', grupo: 'ventas', orden: 2, requiere_modulo_optica: false },
@@ -163,7 +160,6 @@ export async function initMasterDbTables(): Promise<void> {
     });
     console.log('Tabla configuracion_global creada');
 
-    // Insertar configuración inicial
     await masterDb('configuracion_global').insert([
       { clave: 'mostrar_modulo_optica', valor: 'true', tipo: 'boolean', descripcion: 'Mostrar módulo de óptica en el sistema', solo_master: true },
     ]);
@@ -192,6 +188,8 @@ export async function initMasterDbTables(): Promise<void> {
     await masterDb('bases_datos').insert({
       nombre: 'Empresa Principal',
       db_name: 'gestio_db',
+      db_host: 'ep-noisy-sound-asv7n572-pooler.c-4.eu-central-1.aws.neon.tech',
+      db_port: 5432,
     });
     console.log('Base de datos inicial (gestio_db) registrada');
   }
