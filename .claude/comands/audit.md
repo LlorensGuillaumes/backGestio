@@ -1,0 +1,1 @@
+"Actúa como experto en ciberseguridad. Revisa los archivos del backend buscando vulnerabilidades. Especial atención a cómo se pasan los nombres de tabla en crudFactory.ts y si hay riesgo de inyección. Usa grep si es necesario para buscar patrones inseguros."
