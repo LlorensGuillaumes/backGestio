@@ -694,69 +694,29 @@ export async function createDatabaseFromTemplate(
     return { success: false, error: 'Ya existe una base de datos con ese nombre' };
   }
 
-  // Verificar que el template existe
-  const postgresDbs = await getPostgresDatabases();
-  if (!postgresDbs.includes('gestio_db')) {
-    return { success: false, error: 'La base de datos plantilla gestio_db no existe' };
+  // Verificar que gestio_db está registrada en bases_datos (es la plantilla)
+  const templateDb = await masterDb<BaseDatos>('bases_datos')
+    .where('db_name', 'gestio_db')
+    .first();
+  if (!templateDb) {
+    return { success: false, error: 'La base de datos plantilla gestio_db no está registrada en bases_datos' };
   }
 
-  // Verificar que la nueva DB no existe ya en PostgreSQL
-  if (postgresDbs.includes(newDbName)) {
-    // Existe en PostgreSQL pero no en la tabla, la registramos
-    await masterDb('bases_datos').insert({
-      nombre,
-      db_name: newDbName,
-      db_host: 'localhost',
-      db_port: 5432,
-      activa: true,
-    });
-    return { success: true, dbName: newDbName };
-  }
+  // En Neon no se pueden crear bases de datos con CREATE DATABASE
+  // Cada base de datos en Neon es un proyecto independiente
+  // Solo registramos la nueva base de datos en la tabla bases_datos
+  // La base de datos debe crearse manualmente en Neon
 
-  try {
-    // 1. Crear la base de datos vacía
-    await masterDb.raw(`CREATE DATABASE "${newDbName}"`);
+  // Registrar en la tabla bases_datos
+  // El usuario debe proporcionar la connection string completa
+  await masterDb('bases_datos').insert({
+    nombre,
+    db_name: newDbName,
+    db_host: process.env.DB_HOST ?? 'localhost',
+    db_port: Number(process.env.DB_PORT ?? 5432),
+    activa: true,
+  });
 
-    // 2. Copiar solo el schema (estructura) usando pg_dump y psql
-    const { exec } = await import('child_process');
-    const { promisify } = await import('util');
-    const execAsync = promisify(exec);
-
-    const dbHost = process.env.DB_HOST ?? 'localhost';
-    const dbPort = process.env.DB_PORT ?? '5432';
-    const dbUser = process.env.DB_USER ?? 'postgres';
-    const dbPassword = process.env.DB_PASSWORD ?? '';
-
-    // Configurar variable de entorno para la contraseña
-    const env = { ...process.env, PGPASSWORD: dbPassword };
-
-    // pg_dump --schema-only para obtener solo la estructura
-    // Luego psql para aplicarla a la nueva base de datos
-    const command = `pg_dump -h ${dbHost} -p ${dbPort} -U ${dbUser} --schema-only gestio_db | psql -h ${dbHost} -p ${dbPort} -U ${dbUser} -d "${newDbName}"`;
-
-    await execAsync(command, { env });
-
-    // 3. Registrar en la tabla bases_datos
-    await masterDb('bases_datos').insert({
-      nombre,
-      db_name: newDbName,
-      db_host: 'localhost',
-      db_port: 5432,
-      activa: true,
-    });
-
-    return { success: true, dbName: newDbName };
-  } catch (error) {
-    console.error('Error creando base de datos:', error);
-
-    // Intentar eliminar la base de datos si se creó pero falló el schema
-    try {
-      await masterDb.raw(`DROP DATABASE IF EXISTS "${newDbName}"`);
-    } catch (dropError) {
-      console.error('Error eliminando base de datos fallida:', dropError);
-    }
-
-    const message = error instanceof Error ? error.message : 'Error desconocido';
-    return { success: false, error: message };
-  }
+  return { success: true, dbName: newDbName };
 }
+```
