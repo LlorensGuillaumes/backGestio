@@ -613,6 +613,7 @@ export async function getPostgresDatabases(): Promise<string[]> {
  * Sincroniza las bases de datos de PostgreSQL con la tabla bases_datos
  * - Añade las que faltan (detectadas automáticamente)
  * - Elimina las que ya no existen en PostgreSQL
+ * NOTA: No elimina gestio_db (la base de datos principal en Neon)
  */
 export async function syncDatabasesFromPostgres(): Promise<{
   added: string[];
@@ -657,7 +658,12 @@ export async function syncDatabasesFromPostgres(): Promise<{
   }
 
   // Eliminar de bases_datos las que ya no existen en PostgreSQL
+  // PERO no eliminar gestio_db (la base de datos principal en Neon)
   for (const db of registeredDbs) {
+    if (db.db_name === 'gestio_db') {
+      // No eliminar gestio_db, es la base de datos principal en Neon
+      continue;
+    }
     if (!postgresDbSet.has(db.db_name)) {
       await masterDb('bases_datos').where('db_name', db.db_name).delete();
       removed.push(db.db_name);
