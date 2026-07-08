@@ -182,7 +182,7 @@ export async function initMasterDbTables(): Promise<void> {
     console.log('Tabla sesiones_activas creada');
   }
 
-  // Insertar base de datos inicial si no existe
+  // Insertar/actualizar base de datos gestio_db
   const existingDb = await masterDb('bases_datos').where('db_name', 'gestio_db').first();
   if (!existingDb) {
     await masterDb('bases_datos').insert({
@@ -191,8 +191,22 @@ export async function initMasterDbTables(): Promise<void> {
       db_host: 'ep-noisy-sound-asv7n572-pooler.c-4.eu-central-1.aws.neon.tech',
       db_port: 5432,
       connection_string: process.env.DATABASE_URL,
+      activa: true,
     });
     console.log('Base de datos inicial (gestio_db) registrada');
+  } else {
+    // Actualizar connection_string si no está o es diferente
+    if (!existingDb.connection_string || existingDb.connection_string !== process.env.DATABASE_URL) {
+      await masterDb('bases_datos')
+        .where('db_name', 'gestio_db')
+        .update({
+          connection_string: process.env.DATABASE_URL,
+          db_host: 'ep-noisy-sound-asv7n572-pooler.c-4.eu-central-1.aws.neon.tech',
+          db_port: 5432,
+          activa: true,
+        });
+      console.log('Base de datos (gestio_db) actualizada con connection_string');
+    }
   }
 
   console.log('Inicialización de tablas de gestio_master completada');
