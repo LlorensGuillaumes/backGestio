@@ -405,6 +405,75 @@ export async function deleteMatricula(req: Request, res: Response, next: NextFun
 }
 
 // =========================================================
+// ASIGNATURAS (Servicios de tipo asignatura)
+// =========================================================
+
+/** GET /asignaturas — lista de asignaturas/servicios activos */
+export async function getAsignaturas(_req: Request, res: Response, next: NextFunction) {
+  try {
+    const rows = await db("Servicios")
+      .select("IdServicio as id", "Nombre", "Descripcion")
+      .where("Activo", 1)
+      .orderBy("Nombre", "asc");
+    res.json({ data: rows, totalCount: rows.length });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/** POST /asignaturas — crear nueva asignatura */
+export async function createAsignatura(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (!req.body?.nombre?.trim()) {
+      return res.status(400).json({ error: "El nombre es obligatorio" });
+    }
+    const [row] = await db("Servicios")
+      .insert({
+        Nombre: String(req.body.nombre).trim(),
+        Descripcion: req.body.descripcion ?? null,
+        Activo: 1,
+      })
+      .returning("IdServicio");
+    res.status(201).json({ id: typeof row === "object" ? row.IdServicio : row });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/** PUT /asignaturas/:id — actualizar asignatura */
+export async function updateAsignatura(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = Number(req.params.id);
+    const b = req.body ?? {};
+    const patch: Record<string, unknown> = {};
+    if (b.nombre !== undefined) patch.Nombre = String(b.nombre).trim();
+    if (b.descripcion !== undefined) patch.Descripcion = b.descripcion;
+    if (Object.keys(patch).length) {
+      await db("Servicios").where("IdServicio", id).update(patch);
+    }
+    res.json({ success: true, id });
+  } catch (e) {
+    next(e);
+  }
+}
+
+/** DELETE /asignaturas/:id — baja lógica de asignatura */
+export async function deleteAsignatura(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = Number(req.params.id);
+    // Verificar que no esté en uso en clases
+    const enUso = await db("ClasesRecurrentes").where("IdServicio", id).andWhere("Activo", 1).first();
+    if (enUso) {
+      return res.status(409).json({ error: "La asignatura está en uso en clases activas" });
+    }
+    await db("Servicios").where("IdServicio", id).update({ Activo: 0 });
+    res.json({ success: true });
+  } catch (e) {
+    next(e);
+  }
+}
+
+// =========================================================
 // OPCIONES (para selects del formulario)
 // =========================================================
 

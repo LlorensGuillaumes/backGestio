@@ -12,6 +12,10 @@ import {
   updateMatricula,
   deleteMatricula,
   getOpcionesEscola,
+  getAsignaturas,
+  createAsignatura,
+  updateAsignatura,
+  deleteAsignatura,
 } from "../../controllers/controllersPersonalizados/escola.controllers.js";
 import {
   getAulas,
@@ -35,6 +39,12 @@ escolaRouter.get("/aulas", getAulas);
 escolaRouter.post("/aulas", createAula);
 escolaRouter.put("/aulas/:id", updateAula);
 escolaRouter.delete("/aulas/:id", deleteAula);
+
+// Asignaturas
+escolaRouter.get("/asignaturas", getAsignaturas);
+escolaRouter.post("/asignaturas", createAsignatura);
+escolaRouter.put("/asignaturas/:id", updateAsignatura);
+escolaRouter.delete("/asignaturas/:id", deleteAsignatura);
 
 // Clases recurrentes
 escolaRouter.get("/clases-recurrentes", getClasesRecurrentes);
