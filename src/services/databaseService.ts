@@ -719,4 +719,3 @@ export async function createDatabaseFromTemplate(
 
   return { success: true, dbName: newDbName };
 }
-```
