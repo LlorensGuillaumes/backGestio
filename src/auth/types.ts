@@ -86,6 +86,7 @@ export interface BaseDatos {
   db_name: string;
   db_host: string;
   db_port: number;
+  connection_string?: string; // Connection string completa para Neon (opcional)
   serie_facturacion: string;
   activa: boolean;
   created_at: Date;

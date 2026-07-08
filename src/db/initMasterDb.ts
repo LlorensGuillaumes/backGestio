@@ -12,6 +12,7 @@ export async function initMasterDbTables(): Promise<void> {
       table.string('db_name', 100).notNullable().unique();
       table.string('db_host', 255).defaultTo('localhost');
       table.integer('db_port').defaultTo(5432);
+      table.text('connection_string');
       table.string('serie_facturacion', 10).defaultTo('F');
       table.boolean('activa').defaultTo(true);
       table.timestamp('created_at').defaultTo(masterDb.fn.now());
@@ -19,6 +20,14 @@ export async function initMasterDbTables(): Promise<void> {
     });
     console.log('Tabla bases_datos creada');
   } else {
+    // Añadir columna connection_string si no existe
+    const hasConnectionString = await masterDb.schema.hasColumn('bases_datos', 'connection_string');
+    if (!hasConnectionString) {
+      await masterDb.schema.alterTable('bases_datos', (table) => {
+        table.text('connection_string');
+      });
+      console.log('Columna connection_string añadida a bases_datos');
+    }
     const hasSerieFacturacion = await masterDb.schema.hasColumn('bases_datos', 'serie_facturacion');
     if (!hasSerieFacturacion) {
       await masterDb.schema.alterTable('bases_datos', (table) => {

@@ -12,13 +12,18 @@ CREATE TABLE IF NOT EXISTS "clientes" (
     "tipo_cliente" VARCHAR(20) DEFAULT 'PERSONA',
     "documento_fiscal" VARCHAR(20),
     "nombre_comercial" VARCHAR(200),
-    "es_cliente_factura_simplificada" BOOLEAN DEFAULT FALSE,
+    "es_factura_simplificada" BOOLEAN DEFAULT FALSE,
     "direccion" VARCHAR(300),
     "codigo_postal" VARCHAR(10),
     "poblacion" VARCHAR(100),
     "provincia" VARCHAR(100),
     "pais" VARCHAR(100) DEFAULT 'España',
     "email" VARCHAR(200),
+    "telefono1" VARCHAR(30),
+    "telefono2" VARCHAR(30),
+    "iban" VARCHAR(50),
+    "titular_cuenta" VARCHAR(200),
+    "bic" VARCHAR(20),
     "observaciones" TEXT,
     "activo" SMALLINT DEFAULT 1,
     "fecha_alta" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -140,6 +145,7 @@ CREATE TABLE IF NOT EXISTS "Profesionales" (
     "NombreCompleto" VARCHAR(200) NOT NULL,
     "Especialidad" VARCHAR(100) NULL,
     "NumColegiado" VARCHAR(50) NULL,
+    "IdUsuario" INTEGER,
     "Activo" BOOLEAN NOT NULL DEFAULT TRUE,
     "FechaCreacion" TIMESTAMP DEFAULT NOW(),
     "FechaModificacion" TIMESTAMP NULL
@@ -182,7 +188,8 @@ CREATE TABLE IF NOT EXISTS "Servicios" (
     "RequiereCita" BOOLEAN DEFAULT FALSE,
     "Observaciones" TEXT,
     "Activo" SMALLINT DEFAULT 1,
-    "FechaAlta" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    "FechaAlta" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "ImporteMatricula" DECIMAL(10, 2) DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS "IX_Servicios_Codigo" ON "Servicios"("Codigo");
@@ -985,5 +992,108 @@ CREATE INDEX IF NOT EXISTS "idx_festivos_fecha" ON "FestivosEmpresa"("FechaInici
 CREATE INDEX IF NOT EXISTS "idx_festivos_anyo" ON "FestivosEmpresa"("Anyo");
 
 -- =====================================================
--- FIN gestio_db
+-- 16. CONTACTOS
 -- =====================================================
+
+CREATE TABLE IF NOT EXISTS "Contactos" (
+    "IdContacto" SERIAL PRIMARY KEY,
+    "Nombre" VARCHAR(100) NOT NULL,
+    "Apellido1" VARCHAR(100),
+    "Apellido2" VARCHAR(100),
+    "Dni" VARCHAR(20),
+    "Telefono" VARCHAR(30),
+    "Email" VARCHAR(200),
+    "Direccion" VARCHAR(300),
+    "CodigoPostal" VARCHAR(10),
+    "Poblacion" VARCHAR(100),
+    "Provincia" VARCHAR(100),
+    "Iban" VARCHAR(50),
+    "TitularCuenta" VARCHAR(200),
+    "Bic" VARCHAR(20),
+    "Observaciones" TEXT,
+    "Activo" SMALLINT DEFAULT 1,
+    "FechaCreacion" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "FechaModificacion" TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "AlumnoResponsables" (
+    "IdAlumnoResponsable" SERIAL PRIMARY KEY,
+    "IdCliente" INT NOT NULL REFERENCES "clientes"("id") ON DELETE CASCADE,
+    "IdContacto" INT NOT NULL REFERENCES "Contactos"("IdContacto") ON DELETE CASCADE,
+    "Parentesco" VARCHAR(50),
+    "EsPagador" BOOLEAN DEFAULT FALSE,
+    "EsPrincipal" BOOLEAN DEFAULT FALSE,
+    "Activo" SMALLINT DEFAULT 1,
+    "FechaCreacion" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "FechaModificacion" TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS "idx_contactos_activo" ON "Contactos"("Activo");
+CREATE INDEX IF NOT EXISTS "idx_alumno_responsables_cliente" ON "AlumnoResponsables"("IdCliente");
+CREATE INDEX IF NOT EXISTS "idx_alumno_responsables_contacto" ON "AlumnoResponsables"("IdContacto");
+
+-- =====================================================
+-- 17. ESCUELA - AULAS Y CLASES
+
+CREATE TABLE IF NOT EXISTS "Aulas" (
+    "IdAula" SERIAL PRIMARY KEY,
+    "Nombre" VARCHAR(100) NOT NULL,
+    "Capacidad" INTEGER,
+    "Observaciones" TEXT,
+    "Activo" BOOLEAN DEFAULT true,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "ClasesRecurrentes" (
+    "IdClaseRecurrente" SERIAL PRIMARY KEY,
+    "Nombre" VARCHAR(200) NOT NULL,
+    "IdServicio" INTEGER,
+    "IdProfesional" INTEGER,
+    "Tipo" VARCHAR(20) NOT NULL DEFAULT 'INDIVIDUAL',
+    "CapacidadMax" INTEGER NOT NULL DEFAULT 1,
+    "DiaSemana" INTEGER,
+    "HoraInicio" TIME,
+    "DuracionMinutos" INTEGER DEFAULT 60,
+    "Aula" VARCHAR(100),
+    "FechaInicio" DATE,
+    "FechaFin" DATE,
+    "Observaciones" TEXT,
+    "Activo" BOOLEAN DEFAULT true,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "ClaseHorarios" (
+    "IdHorario" SERIAL PRIMARY KEY,
+    "IdClaseRecurrente" INTEGER NOT NULL REFERENCES "ClasesRecurrentes"("IdClaseRecurrente") ON DELETE CASCADE,
+    "DiaSemana" INTEGER NOT NULL,
+    "HoraInicio" TIME NOT NULL,
+    "DuracionMinutos" INTEGER NOT NULL DEFAULT 60,
+    "IdAula" INTEGER REFERENCES "Aulas"("IdAula"),
+    "Activo" BOOLEAN DEFAULT true,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "Matriculas" (
+    "IdMatricula" SERIAL PRIMARY KEY,
+    "IdClaseRecurrente" INTEGER NOT NULL,
+    "IdCliente" INTEGER NOT NULL,
+    "CuotaMensual" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "Estado" VARCHAR(50) NOT NULL DEFAULT 'ACTIVA',
+    "FechaAlta" DATE NOT NULL DEFAULT CURRENT_DATE,
+    "FechaBaja" DATE,
+    "Activo" BOOLEAN DEFAULT true,
+    "created_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS "idx_aulas_activo" ON "Aulas"("Activo");
+CREATE INDEX IF NOT EXISTS "idx_clases_activas" ON "ClasesRecurrentes"("Activo");
+CREATE INDEX IF NOT EXISTS "idx_clasehorarios_clase" ON "ClaseHorarios"("IdClaseRecurrente");
+CREATE INDEX IF NOT EXISTS "idx_matriculas_clase" ON "Matriculas"("IdClaseRecurrente");
+CREATE INDEX IF NOT EXISTS "idx_matriculas_cliente" ON "Matriculas"("IdCliente");
+
+-- =====================================================
+-- FIN gestio_db

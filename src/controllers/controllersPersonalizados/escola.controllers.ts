@@ -289,6 +289,7 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
 
     let query = db("Matriculas as m")
       .join("clientes as c", "m.IdCliente", "c.id")
+      .join("cliente_persona as cp", "c.id", "cp.id_cliente")
       .join("ClasesRecurrentes as cr", "m.IdClaseRecurrente", "cr.IdClaseRecurrente")
       .leftJoin("Profesionales as p", "cr.IdProfesional", "p.IdProfesional")
       .select(
@@ -300,9 +301,9 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
         "cr.HoraInicio",
         "p.NombreCompleto as NombreProfesor",
         "m.IdCliente",
-        "c.nombre",
-        "c.apellido1",
-        "c.apellido2",
+        "cp.nombre",
+        "cp.apellido1",
+        "cp.apellido2",
         "m.CuotaMensual",
         "m.Estado",
         "m.FechaAlta",
@@ -419,15 +420,16 @@ export async function getOpcionesEscola(_req: Request, res: Response, next: Next
       .where("Activo", true)
       .orderBy("NombreCompleto", "asc");
 
-    const alumnos = await db("clientes")
+    const alumnos = await db("clientes as c")
+      .leftJoin("cliente_persona as cp", "c.id", "cp.id_cliente")
       .select(
-        "id",
+        "c.id",
         db.raw(
-          `TRIM(CONCAT(nombre, ' ', COALESCE(apellido1, ''), ' ', COALESCE(apellido2, ''))) as "NombreCompleto"`
+          `TRIM(CONCAT(cp.nombre, ' ', COALESCE(cp.apellido1, ''), ' ', COALESCE(cp.apellido2, ''))) as "NombreCompleto"`
         )
       )
-      .where("activo", 1)
-      .orderBy("nombre", "asc");
+      .where("c.activo", 1)
+      .orderBy("cp.nombre", "asc");
 
     res.json({ instrumentos, profesores, alumnos });
   } catch (e) {

@@ -1,11 +1,15 @@
 -- Agregar gestio_deb a la tabla bases_datos
 -- Ejecutar conectado a la base de datos master
+-- REEMPLAZA <CONNECTION_STRING> con la connection string real de gestio_deb
 
-INSERT INTO "bases_datos" ("nombre", "db_name", "db_host", "db_port", "activa") VALUES
-('Gestio Deb', 'gestio_deb', 'ep-noisy-sound-asv7n572-pooler.c-4.eu-central-1.aws.neon.tech', 5432, true)
+INSERT INTO "bases_datos" ("nombre", "db_name", "db_host", "db_port", "connection_string", "activa") VALUES
+('Gestio Deb', 'gestio_deb', 'localhost', 5432,
+'<CONNECTION_STRING_GESTIO_DEB>',
+true)
 ON CONFLICT ("db_name") DO UPDATE SET
-  db_host = 'ep-noisy-sound-asv7n572-pooler.c-4.eu-central-1.aws.neon.tech',
+  db_host = 'localhost',
   db_port = 5432,
+  connection_string = '<CONNECTION_STRING_GESTIO_DEB>',
   activa = true;
 
 -- Verificar que se agregó correctamente

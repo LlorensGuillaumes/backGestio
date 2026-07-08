@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS "bases_datos" (
     "db_name" VARCHAR(100) NOT NULL UNIQUE,
     "db_host" VARCHAR(255) DEFAULT 'localhost',
     "db_port" INTEGER DEFAULT 5432,
+    "connection_string" TEXT,
     "serie_facturacion" VARCHAR(10) DEFAULT 'F',
     "activa" BOOLEAN DEFAULT true,
     "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -367,11 +368,13 @@ ON CONFLICT DO NOTHING;
 -- 6. REGISTRAR BASE DE DATOS TENANT CON HOST NEON
 -- =====================================================
 
-INSERT INTO "bases_datos" ("nombre", "db_name", "db_host", "db_port") VALUES
-('Empresa Principal', 'gestio_db', 'ep-damp-sound-aib16b8y-pooler.c-4.us-east-1.aws.neon.tech', 5432)
+-- Usar connection_string para Neon (más confiable)
+INSERT INTO "bases_datos" ("nombre", "db_name", "connection_string", "db_port", "activa") VALUES
+('Empresa Principal', 'gestio_db', 'postgresql://neondb_owner:npg_23PlKAgSvqcu@ep-noisy-sound-asv7n572-pooler.c-4.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require', 5432, true)
 ON CONFLICT ("db_name") DO UPDATE SET
-  db_host = 'ep-damp-sound-aib16b8y-pooler.c-4.us-east-1.aws.neon.tech',
-  db_port = 5432;
+  connection_string = 'postgresql://neondb_owner:npg_23PlKAgSvqcu@ep-noisy-sound-asv7n572-pooler.c-4.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
+  db_port = 5432,
+  activa = true;
 
 -- =====================================================
 -- FIN gestio_master
