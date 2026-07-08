@@ -83,13 +83,14 @@ type CreateSubfamiliaInput = {
 
 export async function listClientes(
   cfg: TableConfig,
-  opts: { take?: number; offset?: number; includeInactive?: boolean }
+  opts: { take?: number; offset?: number; includeInactive?: boolean; q?: string | null }
 ) {
   const take = opts.take ?? 50;
   const offset = opts.offset ?? 0;
   const includeInactive = opts.includeInactive ?? false;
+  const searchQ = opts.q?.trim() ?? null;
 
-  const q = db({ c: cfg.table })
+  const baseQuery = db({ c: cfg.table })
     .leftJoin({ cp: "cliente_persona" }, "c.id", "cp.id_cliente")
     .leftJoin({ ce: "cliente_empresa" }, "c.id", "ce.id_cliente")
     .leftJoin({ ct: "clientes_telefonos" }, function () {
@@ -109,8 +110,8 @@ export async function listClientes(
               NULLIF(
                 trim(
                   COALESCE(cp.nombre,'') || ' ' ||
-                  COALESCE(cp.primer_apellido,'') || ' ' ||
-                  COALESCE(cp.segundo_apellido,'')
+                  COALESCE(cp.apellido1,'') || ' ' ||
+                  COALESCE(cp.apellido2,'')
                 ),
                 ''
               ),
@@ -126,22 +127,76 @@ export async function listClientes(
     )
     .modify((qb) => {
       if (!includeInactive) qb.where("c.activo", 1);
-      // si quisieras aplicar defaultFilters aquí también, hazlo con alias:
-      // if (!includeInactive) applyDefaultFiltersWithAlias(qb, cfg, "c");
+      
+      // Search filter - search in nombreCompleto, documento_fiscal, and telefono
+      if (searchQ) {
+        qb.where(function () {
+          this.whereRaw(`
+            COALESCE(
+              NULLIF(
+                trim(
+                  COALESCE(cp.nombre,'') || ' ' ||
+                  COALESCE(cp.apellido1,'') || ' ' ||
+                  COALESCE(cp.apellido2,'')
+                ),
+                ''
+              ),
+              'Persona sin nombre'
+            ) ILIKE ?
+          `, [`%${searchQ}%`])
+          .orWhereRaw(`
+            COALESCE(
+              NULLIF(trim(COALESCE(ce.razon_social,'')), ''),
+              'Empresa sin nombre'
+            ) ILIKE ?
+          `, [`%${searchQ}%`])
+          .orWhere("c.documento_fiscal", "ILIKE", `%${searchQ}%`);
+        });
+      }
     })
+    .orderBy("c.id", "asc")
     .limit(take)
     .offset(offset);
 
-  const rows = (await q) as ClienteListadoRow[];
+  const rows = (await baseQuery) as ClienteListadoRow[];
 
-  const countRes = await db({ c: cfg.table })
+  // Count query with same filters (needs joins for search to work)
+  const countQuery = db({ c: cfg.table })
+    .leftJoin({ cp: "cliente_persona" }, "c.id", "cp.id_cliente")
+    .leftJoin({ ce: "cliente_empresa" }, "c.id", "ce.id_cliente")
     .modify((qb) => {
       if (!includeInactive) qb.where("c.activo", 1);
-      // idem:
-      // if (!includeInactive) applyDefaultFiltersWithAlias(qb, cfg, "c");
+      
+      // Search filter for count
+      if (searchQ) {
+        qb.where(function () {
+          this.whereRaw(`
+            COALESCE(
+              NULLIF(
+                trim(
+                  COALESCE(cp.nombre,'') || ' ' ||
+                  COALESCE(cp.apellido1,'') || ' ' ||
+                  COALESCE(cp.apellido2,'')
+                ),
+                ''
+              ),
+              'Persona sin nombre'
+            ) ILIKE ?
+          `, [`%${searchQ}%`])
+          .orWhereRaw(`
+            COALESCE(
+              NULLIF(trim(COALESCE(ce.razon_social,'')), ''),
+              'Empresa sin nombre'
+            ) ILIKE ?
+          `, [`%${searchQ}%`])
+          .orWhere("c.documento_fiscal", "ILIKE", `%${searchQ}%`);
+        });
+      }
     })
     .countDistinct<{ total: string }>("c.id as total")
     .first();
+
+  const countRes = await countQuery;
 
   return {
     rows: rows.map((r: ClienteListadoRow) => ({
@@ -194,8 +249,8 @@ export async function getOneCliente(
 
       // persona
       "cp.nombre as p_nombre",
-      "cp.primer_apellido as p_primer_apellido",
-      "cp.segundo_apellido as p_segundo_apellido",
+      "cp.apellido1 as p_primer_apellido",
+      "cp.apellido2 as p_segundo_apellido",
       db.raw(`to_char(cp.fecha_nacimiento::date, 'YYYY-MM-DD') as p_fecha_nacimiento`),
 
 
@@ -213,8 +268,8 @@ export async function getOneCliente(
               NULLIF(
                 trim(
                   COALESCE(cp.nombre,'') || ' ' ||
-                  COALESCE(cp.primer_apellido,'') || ' ' ||
-                  COALESCE(cp.segundo_apellido,'')
+                  COALESCE(cp.apellido1,'') || ' ' ||
+                  COALESCE(cp.apellido2,'')
                 ),
                 ''
               ),
@@ -477,15 +532,15 @@ async function upsertPersonaEmpresa(trx: any, idCliente: number, p: ReturnType<t
       .insert({
         id_cliente: idCliente,
         nombre: s(p.persona?.nombre),
-        primer_apellido: s(p.persona?.primerApellido),
-        segundo_apellido: s(p.persona?.segundoApellido),
+        apellido1: s(p.persona?.primerApellido),
+        apellido2: s(p.persona?.segundoApellido),
         fecha_nacimiento: s(p.persona?.fechaNacimiento), // YYYY-MM-DD (string) ok
       })
       .onConflict("id_cliente")
       .merge({
         nombre: s(p.persona?.nombre),
-        primer_apellido: s(p.persona?.primerApellido),
-        segundo_apellido: s(p.persona?.segundoApellido),
+        apellido1: s(p.persona?.primerApellido),
+        apellido2: s(p.persona?.segundoApellido),
         fecha_nacimiento: s(p.persona?.fechaNacimiento),
       });
 
@@ -557,10 +612,7 @@ export async function createCliente(cfg: TableConfig, body: ClienteWritePayload)
 }
 
 export async function updateCliente(cfg: TableConfig, idCliente: number, body: ClienteWritePayload) {
-  try{
-
-    console.log('entra en updateCliente')
-    const p = normalizeClienteWrite(body);
+  const p = normalizeClienteWrite(body);
   assertClienteWrite(p);
 
   await db.transaction(async (trx) => {
@@ -594,11 +646,6 @@ export async function updateCliente(cfg: TableConfig, idCliente: number, body: C
   });
 
   return await getOneCliente(cfg, { id: String(idCliente) }, { includeInactive: true });
-
-  }catch(error){
-    console.log(error)
-  }
-  
 }
 
 

@@ -56,6 +56,7 @@ export async function getClientesFull(req: Request, res: Response, next: NextFun
     const take = Number(req.query.take ?? 50);
     const offset = Number(req.query.offset ?? 0);
     const soloActivos = String(req.query.soloActivos ?? "1") === "1";
+    const q = req.query.q ? String(req.query.q) : null;
 
     const clientesCfg = getClientesCfg();
 
@@ -63,6 +64,7 @@ export async function getClientesFull(req: Request, res: Response, next: NextFun
       take,
       offset,
       includeInactive: !soloActivos,
+      q,
     });
 
     res.json(result);
