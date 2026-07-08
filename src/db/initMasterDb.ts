@@ -190,6 +190,7 @@ export async function initMasterDbTables(): Promise<void> {
       db_name: 'gestio_db',
       db_host: 'ep-noisy-sound-asv7n572-pooler.c-4.eu-central-1.aws.neon.tech',
       db_port: 5432,
+      connection_string: process.env.DATABASE_URL,
     });
     console.log('Base de datos inicial (gestio_db) registrada');
   }
