@@ -96,14 +96,41 @@ export async function createUser(input: CreateUserInput): Promise<Usuario> {
     .insert(insertData)
     .returning('*');
 
-  // Asignar a las bases de datos seleccionadas
-  if (input.databases && input.databases.length > 0) {
-    for (const db of input.databases) {
-      await assignUserToDatabase(user.id, db.id, db.rol);
-    }
-  }
+   // Asignar a las bases de datos seleccionadas
+   if (input.databases && input.databases.length > 0) {
+     for (const db of input.databases) {
+       await assignUserToDatabase(user.id, db.id, db.rol);
+     }
+   }
 
-  return user;
+   // Asignar permisos a todos los menús para cada base de datos
+   const databaseIds = input.databases?.map(d => d.id) ?? [];
+   for (const databaseId of databaseIds) {
+     // Obtener todos los menús
+     const menus = await masterDb('menus').select('id');
+     for (const menu of menus) {
+       // Verificar si ya existe el permiso
+       const existingPermiso = await masterDb('permisos_usuario')
+         .where('id_usuario', user.id)
+         .andWhere('id_base_datos', databaseId)
+         .andWhere('id_menu', menu.id)
+         .first();
+       
+       if (!existingPermiso) {
+         await masterDb('permisos_usuario').insert({
+           id_usuario: user.id,
+           id_base_datos: databaseId,
+           id_menu: menu.id,
+           puede_ver: true,
+           puede_crear: true,
+           puede_editar: true,
+           puede_eliminar: true,
+         });
+       }
+     }
+   }
+
+   return user;
 }
 
 export async function updateUser(
