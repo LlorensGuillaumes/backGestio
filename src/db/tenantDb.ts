@@ -25,6 +25,15 @@ async function getTenantConfig(dbName: string): Promise<TenantConfig | null> {
     return null;
   }
 
+  // Si hay connection_string, usarla directamente (Neon)
+  if (result.connection_string) {
+    return {
+      dbName: result.db_name,
+      dbHost: result.connection_string,
+      dbPort: 5432, // No se usa con connection string
+    };
+  }
+
   return {
     dbName: result.db_name,
     dbHost: result.db_host || process.env.DB_HOST || 'localhost',
@@ -46,16 +55,21 @@ export async function getTenantDb(dbName: string): Promise<Knex | null> {
   }
 
   // Crear nueva conexión
+  // Si dbHost contiene una connection string (URL completa), usarla directamente
+  const isConnectionString = config.dbHost?.startsWith('postgresql://') || config.dbHost?.startsWith('postgres://');
+  
   const connection = knex({
     client: 'pg',
-    connection: {
-      host: config.dbHost,
-      port: config.dbPort,
-      user: process.env.DB_USER ?? 'postgres',
-      password: process.env.DB_PASSWORD ?? '',
-      database: config.dbName,
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-    },
+    connection: isConnectionString
+      ? config.dbHost // Connection string completa
+      : {
+          host: config.dbHost,
+          port: config.dbPort,
+          user: process.env.DB_USER ?? 'postgres',
+          password: process.env.DB_PASSWORD ?? '',
+          database: config.dbName,
+          ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+        },
     pool: {
       min: 1,
       max: 5,
