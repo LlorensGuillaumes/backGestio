@@ -107,12 +107,13 @@ export async function getClaseRecurrente(req: Request, res: Response, next: Next
 
     const matriculas = await db("Matriculas as m")
       .join("clientes as c", "m.IdCliente", "c.id")
+      .join("cliente_persona as cp", "c.id", "cp.id_cliente")
       .select(
         "m.IdMatricula as id",
         "m.IdCliente",
-        "c.nombre",
-        "c.apellido1",
-        "c.apellido2",
+        "cp.nombre",
+        "cp.apellido1",
+        "cp.apellido2",
         "m.CuotaMensual",
         "m.Estado",
         "m.FechaAlta",
@@ -120,7 +121,7 @@ export async function getClaseRecurrente(req: Request, res: Response, next: Next
       )
       .where("m.IdClaseRecurrente", id)
       .andWhere("m.Activo", 1)
-      .orderBy("c.nombre", "asc");
+      .orderBy("cp.nombre", "asc");
 
     const sesiones = await db("ClaseHorarios as ch")
       .leftJoin("Aulas as a", "ch.IdAula", "a.IdAula")
