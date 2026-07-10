@@ -284,11 +284,13 @@ export async function deleteClaseRecurrente(req: Request, res: Response, next: N
 // MATRÍCULAS
 // =========================================================
 
-/** GET /matriculas — lista con clase, alumno y profesor. Filtros ?idClase= ?idCliente= */
+/** GET /matriculas — lista con clase, alumno y profesor. Filtros ?idClase= ?idCliente= ?idServicio= ?idProfesional= */
 export async function getMatriculas(req: Request, res: Response, next: NextFunction) {
   try {
     const idClase = req.query.idClase ? Number(req.query.idClase) : null;
     const idCliente = req.query.idCliente ? Number(req.query.idCliente) : null;
+    const idServicio = req.query.idServicio ? Number(req.query.idServicio) : null;
+    const idProfesional = req.query.idProfesional ? Number(req.query.idProfesional) : null;
     const soloActivas = String(req.query.soloActivas ?? "1") === "1";
 
     // Query para clases recurrentes
@@ -296,6 +298,7 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
       .join("clientes as c", "m.IdCliente", "c.id")
       .leftJoin("cliente_persona as cp", "c.id", "cp.id_cliente")
       .join("ClasesRecurrentes as cr", "m.IdClaseRecurrente", "cr.IdClaseRecurrente")
+      .leftJoin("Servicios as s", "cr.IdServicio", "s.IdServicio")
       .leftJoin("Profesionales as p", "cr.IdProfesional", "p.IdProfesional")
       .select(
         "m.IdMatricula as id",
@@ -306,6 +309,7 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
         "cr.DiaSemana",
         "cr.HoraInicio",
         "p.NombreCompleto as NombreProfesor",
+        "s.Nombre as NombreInstrumento",
         "m.IdCliente",
         "cp.nombre",
         "cp.apellido1",
@@ -326,6 +330,7 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
       .join("clientes as c", "m.IdCliente", "c.id")
       .leftJoin("cliente_persona as cp", "c.id", "cp.id_cliente")
       .join("ClasesGrupales as cg", "m.IdClaseGrupal", "cg.IdClaseGrupal")
+      .leftJoin("Servicios as s", "cg.IdServicio", "s.IdServicio")
       .leftJoin("Profesionales as p", "cg.IdProfesor", "p.IdProfesional")
       .select(
         "m.IdMatricula as id",
@@ -336,6 +341,7 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
         "cg.DiaDeLaSemana as DiaSemana",
         "cg.HoraInicio as HoraInicio",
         "p.NombreCompleto as NombreProfesor",
+        "s.Nombre as NombreInstrumento",
         "m.IdCliente",
         "cp.nombre",
         "cp.apellido1",
@@ -355,6 +361,14 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
     if (idCliente) {
       queryRecurrente.where("m.IdCliente", idCliente);
       queryGrupal.where("m.IdCliente", idCliente);
+    }
+    if (idServicio) {
+      queryRecurrente.where("cr.IdServicio", idServicio);
+      queryGrupal.where("cg.IdServicio", idServicio);
+    }
+    if (idProfesional) {
+      queryRecurrente.where("cr.IdProfesional", idProfesional);
+      queryGrupal.where("cg.IdProfesor", idProfesional);
     }
     if (soloActivas) {
       queryRecurrente.andWhere("m.Activo", 1);
