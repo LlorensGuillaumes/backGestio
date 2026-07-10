@@ -154,6 +154,58 @@ export async function deleteClaseGrupal(req: Request, res: Response, next: NextF
 }
 
 // =========================================================
+// MATRÍCULA DE ALUMNOS EN CLASES GRUPALES
+// =========================================================
+
+/** POST /clases-grupales/matricular — matricular alumno en clase grupal */
+export async function matricularAlumnoClaseGrupal(req: Request, res: Response, next: NextFunction) {
+  try {
+    const b = req.body ?? {};
+    
+    if (!b.idClaseGrupal || !b.idCliente) {
+      res.status(400).json({ error: "IdClaseGrupal e IdCliente son obligatorios" });
+      return;
+    }
+
+    // Verificar que la clase existe y está activa
+    const clase = await db("ClasesGrupales")
+      .where("IdClaseGrupal", Number(b.idClaseGrupal))
+      .where("Activa", true)
+      .first();
+
+    if (!clase) {
+      res.status(404).json({ error: "Clase grupal no encontrada o no activa" });
+      return;
+    }
+
+    // Verificar que el cliente existe
+    const cliente = await db("clientes")
+      .where("id", Number(b.idCliente))
+      .first();
+
+    if (!cliente) {
+      res.status(404).json({ error: "Cliente no encontrado" });
+      return;
+    }
+
+    // Crear la matrícula
+    const [row] = await db("Matriculas")
+      .insert({
+        IdClaseRecurrente: null, // No está asociada a una clase recurrente
+        IdCliente: Number(b.idCliente),
+        CuotaMensual: Number(b.cuotaMensual ?? 0),
+        Estado: "ACTIVA",
+        Activo: true,
+      })
+      .returning("IdMatricula");
+
+    res.status(201).json({ id: typeof row === "object" ? row.IdMatricula : row, success: true });
+  } catch (e) {
+    next(e);
+  }
+}
+
+// =========================================================
 // OPCIONES (para selects del formulario)
 // =========================================================
 

@@ -24,6 +24,7 @@ import {
   updateClaseGrupal,
   deleteClaseGrupal,
   getOpcionesClasesGrupales,
+  matricularAlumnoClaseGrupal,
 } from "../../controllers/controllersPersonalizados/clasesGrupales.controllers.js";
 import {
   getAulas,
@@ -61,6 +62,7 @@ escolaRouter.get("/clases-grupales/:id", getClaseGrupal);
 escolaRouter.post("/clases-grupales", createClaseGrupal);
 escolaRouter.put("/clases-grupales/:id", updateClaseGrupal);
 escolaRouter.delete("/clases-grupales/:id", deleteClaseGrupal);
+escolaRouter.post("/clases-grupales/matricular", matricularAlumnoClaseGrupal);
 
 // Clases recurrentes
 escolaRouter.get("/clases-recurrentes", getClasesRecurrentes);
