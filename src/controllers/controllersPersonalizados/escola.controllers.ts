@@ -114,9 +114,12 @@ export async function getClaseRecurrente(req: Request, res: Response, next: Next
         "cp.nombre",
         "cp.apellido1",
         "cp.apellido2",
+        "m.ImportePreMatricula",
+        "m.ImporteMatricula",
         "m.CuotaMensual",
         "m.Estado",
         "m.FechaAlta",
+        "m.FechaBaja",
         "m.Activo"
       )
       .where("m.IdClaseRecurrente", id)
@@ -312,6 +315,7 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
         "m.CuotaMensual",
         "m.Estado",
         "m.FechaAlta",
+        "cr.FechaFin",
         "m.FechaBaja",
         "m.Activo"
       )
@@ -341,6 +345,7 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
         "m.CuotaMensual",
         "m.Estado",
         "m.FechaAlta",
+        "cg.FechaFin",
         "m.FechaBaja",
         "m.Activo"
       )
