@@ -307,6 +307,8 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
         "cp.nombre",
         "cp.apellido1",
         "cp.apellido2",
+        "m.ImportePreMatricula",
+        "m.ImporteMatricula",
         "m.CuotaMensual",
         "m.Estado",
         "m.FechaAlta",
@@ -334,6 +336,8 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
         "cp.nombre",
         "cp.apellido1",
         "cp.apellido2",
+        "m.ImportePreMatricula",
+        "m.ImporteMatricula",
         "m.CuotaMensual",
         "m.Estado",
         "m.FechaAlta",
@@ -424,6 +428,8 @@ export async function updateMatricula(req: Request, res: Response, next: NextFun
     const b = req.body ?? {};
     const patch: Record<string, unknown> = {};
     if (b.cuotaMensual !== undefined) patch.CuotaMensual = Number(b.cuotaMensual);
+    if (b.importePreMatricula !== undefined) patch.ImportePreMatricula = Number(b.importePreMatricula);
+    if (b.importeMatricula !== undefined) patch.ImporteMatricula = Number(b.importeMatricula);
     if (b.estado !== undefined) patch.Estado = b.estado;
     if (b.observaciones !== undefined) patch.Observaciones = b.observaciones;
     await db("Matriculas").where("IdMatricula", id).update(patch);

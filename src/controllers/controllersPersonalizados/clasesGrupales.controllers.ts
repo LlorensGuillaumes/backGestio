@@ -193,6 +193,8 @@ export async function matricularAlumnoClaseGrupal(req: Request, res: Response, n
       .insert({
         IdClaseGrupal: Number(b.idClaseGrupal),
         IdCliente: Number(b.idCliente),
+        ImportePreMatricula: Number(b.importePreMatricula ?? 0),
+        ImporteMatricula: Number(b.importeMatricula ?? 0),
         CuotaMensual: Number(b.cuotaMensual ?? 0),
         Estado: "ACTIVA",
         Activo: true,
