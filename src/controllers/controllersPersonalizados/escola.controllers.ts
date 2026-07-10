@@ -288,7 +288,8 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
     const idCliente = req.query.idCliente ? Number(req.query.idCliente) : null;
     const soloActivas = String(req.query.soloActivas ?? "1") === "1";
 
-    let query = db("Matriculas as m")
+    // Query para clases recurrentes
+    const queryRecurrente = db("Matriculas as m")
       .join("clientes as c", "m.IdCliente", "c.id")
       .leftJoin("cliente_persona as cp", "c.id", "cp.id_cliente")
       .join("ClasesRecurrentes as cr", "m.IdClaseRecurrente", "cr.IdClaseRecurrente")
@@ -296,6 +297,7 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
       .select(
         "m.IdMatricula as id",
         "m.IdClaseRecurrente",
+        db.raw("NULL as IdClaseGrupal"),
         "cr.Nombre as NombreClase",
         "cr.Tipo",
         "cr.DiaSemana",
@@ -311,13 +313,53 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
         "m.FechaBaja",
         "m.Activo"
       )
-      .orderBy("m.FechaAlta", "desc");
+      .where("m.IdClaseRecurrente", ">", 0);
 
-    if (idClase) query = query.where("m.IdClaseRecurrente", idClase);
-    if (idCliente) query = query.where("m.IdCliente", idCliente);
-    if (soloActivas) query = query.where("m.Activo", 1);
+    // Query para clases grupales
+    const queryGrupal = db("Matriculas as m")
+      .join("clientes as c", "m.IdCliente", "c.id")
+      .leftJoin("cliente_persona as cp", "c.id", "cp.id_cliente")
+      .join("ClasesGrupales as cg", "m.IdClaseGrupal", "cg.IdClaseGrupal")
+      .leftJoin("Profesionales as p", "cg.IdProfesor", "p.IdProfesional")
+      .select(
+        "m.IdMatricula as id",
+        db.raw("NULL as IdClaseRecurrente"),
+        "m.IdClaseGrupal",
+        "cg.Nombre as NombreClase",
+        db.raw("'GRUPAL' as Tipo"),
+        "cg.DiaDeLaSemana as DiaSemana",
+        "cg.HoraInicio as HoraInicio",
+        "p.NombreCompleto as NombreProfesor",
+        "m.IdCliente",
+        "cp.nombre",
+        "cp.apellido1",
+        "cp.apellido2",
+        "m.CuotaMensual",
+        "m.Estado",
+        "m.FechaAlta",
+        "m.FechaBaja",
+        "m.Activo"
+      )
+      .where("m.IdClaseGrupal", ">", 0);
 
-    const rows = await query;
+    // Aplicar filtros
+    if (idCliente) {
+      queryRecurrente.where("m.IdCliente", idCliente);
+      queryGrupal.where("m.IdCliente", idCliente);
+    }
+    if (soloActivas) {
+      queryRecurrente.andWhere("m.Activo", 1);
+      queryGrupal.andWhere("m.Activo", 1);
+    }
+
+    // Ejecutar ambas queries
+    const [rowsRecurrente, rowsGrupal] = await Promise.all([
+      queryRecurrente.orderBy("m.FechaAlta", "desc"),
+      queryGrupal.orderBy("m.FechaAlta", "desc")
+    ]);
+
+    // Combinar resultados
+    const rows = [...rowsRecurrente, ...rowsGrupal];
     res.json({ data: rows, totalCount: rows.length });
   } catch (e) {
     next(e);
