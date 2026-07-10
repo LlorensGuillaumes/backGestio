@@ -39,7 +39,7 @@ export async function getClasesGrupales(req: Request, res: Response, next: NextF
     if (idProfesor) query = query.where("cg.IdProfesor", idProfesor);
 
     const rows = await query;
-    res.json({ data: rows, totalCount: rows.length });
+    res.json(rows);
   } catch (e) {
     next(e);
   }
