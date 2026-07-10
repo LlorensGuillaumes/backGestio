@@ -18,6 +18,14 @@ import {
   deleteAsignatura,
 } from "../../controllers/controllersPersonalizados/escola.controllers.js";
 import {
+  getClasesGrupales,
+  getClaseGrupal,
+  createClaseGrupal,
+  updateClaseGrupal,
+  deleteClaseGrupal,
+  getOpcionesClasesGrupales,
+} from "../../controllers/controllersPersonalizados/clasesGrupales.controllers.js";
+import {
   getAulas,
   createAula,
   updateAula,
@@ -45,6 +53,14 @@ escolaRouter.get("/asignaturas", getAsignaturas);
 escolaRouter.post("/asignaturas", createAsignatura);
 escolaRouter.put("/asignaturas/:id", updateAsignatura);
 escolaRouter.delete("/asignaturas/:id", deleteAsignatura);
+
+// Clases grupales
+escolaRouter.get("/clases-grupales", getClasesGrupales);
+escolaRouter.get("/clases-grupales/opciones", getOpcionesClasesGrupales);
+escolaRouter.get("/clases-grupales/:id", getClaseGrupal);
+escolaRouter.post("/clases-grupales", createClaseGrupal);
+escolaRouter.put("/clases-grupales/:id", updateClaseGrupal);
+escolaRouter.delete("/clases-grupales/:id", deleteClaseGrupal);
 
 // Clases recurrentes
 escolaRouter.get("/clases-recurrentes", getClasesRecurrentes);

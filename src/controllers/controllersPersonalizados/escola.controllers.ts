@@ -107,7 +107,7 @@ export async function getClaseRecurrente(req: Request, res: Response, next: Next
 
     const matriculas = await db("Matriculas as m")
       .join("clientes as c", "m.IdCliente", "c.id")
-      .join("cliente_persona as cp", "c.id", "cp.id_cliente")
+      .leftJoin("cliente_persona as cp", "c.id", "cp.id_cliente")
       .select(
         "m.IdMatricula as id",
         "m.IdCliente",
@@ -121,7 +121,7 @@ export async function getClaseRecurrente(req: Request, res: Response, next: Next
       )
       .where("m.IdClaseRecurrente", id)
       .andWhere("m.Activo", 1)
-      .orderBy("cp.nombre", "asc");
+      .orderBy("m.FechaAlta", "desc");
 
     const sesiones = await db("ClaseHorarios as ch")
       .leftJoin("Aulas as a", "ch.IdAula", "a.IdAula")
@@ -240,14 +240,14 @@ export async function regenerarCitasClases(_req: Request, res: Response, next: N
     // Generar una cita por sesión y semana (8 semanas), con su aula y profesor
     const result = await db.raw(`
       INSERT INTO "Citas"
-        ("NombreContacto","FechaHoraInicio","FechaHoraFin","MotivoVisita","TipoCita","Estado","IdProfesional","IdAula","Observaciones","Activo")
+        ("NombreContacto","FechaHoraInicio","FechaHoraFin","MotivoVisita","TipoCita","Estado","IdProfesional","Observaciones","Activo")
       SELECT
         cr."Nombre",
         (f.fecha + ch."HoraInicio")::timestamp,
         (f.fecha + ch."HoraInicio")::timestamp + (ch."DuracionMinutos" * interval '1 minute'),
         cr."Nombre" || COALESCE(' · ' || a."Nombre", ''),
         'CLASE', 'PROGRAMADA',
-        cr."IdProfesional", ch."IdAula",
+        cr."IdProfesional",
         'Generada desde la clase recurrente',
         1
       FROM "ClaseHorarios" ch
@@ -290,7 +290,7 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
 
     let query = db("Matriculas as m")
       .join("clientes as c", "m.IdCliente", "c.id")
-      .join("cliente_persona as cp", "c.id", "cp.id_cliente")
+      .leftJoin("cliente_persona as cp", "c.id", "cp.id_cliente")
       .join("ClasesRecurrentes as cr", "m.IdClaseRecurrente", "cr.IdClaseRecurrente")
       .leftJoin("Profesionales as p", "cr.IdProfesional", "p.IdProfesional")
       .select(
@@ -495,11 +495,11 @@ export async function getOpcionesEscola(_req: Request, res: Response, next: Next
       .select(
         "c.id",
         db.raw(
-          `TRIM(CONCAT(cp.nombre, ' ', COALESCE(cp.apellido1, ''), ' ', COALESCE(cp.apellido2, ''))) as "NombreCompleto"`
+          `TRIM(CONCAT(COALESCE(cp.nombre, ''), ' ', COALESCE(cp.apellido1, ''), ' ', COALESCE(cp.apellido2, ''))) as "NombreCompleto"`
         )
       )
       .where("c.activo", 1)
-      .orderBy("cp.nombre", "asc");
+      .orderBy("c.id", "asc");
 
     res.json({ instrumentos, profesores, alumnos });
   } catch (e) {
