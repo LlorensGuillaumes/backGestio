@@ -38,13 +38,13 @@ export async function getClasesRecurrentes(req: Request, res: Response, next: Ne
       )
       .select(
         db.raw(
-          '(SELECT COUNT(*) FROM "Matriculas" m WHERE m."IdClaseRecurrente" = cr."IdClaseRecurrente" AND m."Activo" = 1)::int as "Ocupacion"'
+          '(SELECT COUNT(*) FROM "Matriculas" m WHERE m."IdClaseRecurrente" = cr."IdClaseRecurrente" AND m."Activo" = true)::int as "Ocupacion"'
         )
       )
       .orderBy("cr.DiaSemana", "asc")
       .orderBy("cr.HoraInicio", "asc");
 
-    if (soloActivas) query = query.where("cr.Activo", 1);
+    if (soloActivas) query = query.where("cr.Activo", true);
     if (idProfesional) query = query.where("cr.IdProfesional", idProfesional);
 
     const rows = await query;
@@ -55,7 +55,7 @@ export async function getClasesRecurrentes(req: Request, res: Response, next: Ne
       ? await db("ClaseHorarios as ch")
           .leftJoin("Aulas as a", "ch.IdAula", "a.IdAula")
           .whereIn("ch.IdClaseRecurrente", ids)
-          .andWhere("ch.Activo", 1)
+          .andWhere("ch.Activo", true)
           .select("ch.IdClaseRecurrente", "ch.IdHorario as id", "ch.DiaSemana as dia", "ch.HoraInicio as hora", "ch.DuracionMinutos as duracion", "ch.IdAula as idAula", "a.Nombre as aula")
           .orderBy("ch.DiaSemana", "asc")
           .orderBy("ch.HoraInicio", "asc")
@@ -123,13 +123,13 @@ export async function getClaseRecurrente(req: Request, res: Response, next: Next
         "m.Activo"
       )
       .where("m.IdClaseRecurrente", id)
-      .andWhere("m.Activo", 1)
+      .andWhere("m.Activo", true)
       .orderBy("m.FechaAlta", "desc");
 
     const sesiones = await db("ClaseHorarios as ch")
       .leftJoin("Aulas as a", "ch.IdAula", "a.IdAula")
       .where("ch.IdClaseRecurrente", id)
-      .andWhere("ch.Activo", 1)
+      .andWhere("ch.Activo", true)
       .select("ch.IdHorario as id", "ch.DiaSemana as dia", "ch.HoraInicio as hora", "ch.DuracionMinutos as duracion", "ch.IdAula as idAula", "a.Nombre as aula")
       .orderBy("ch.DiaSemana", "asc")
       .orderBy("ch.HoraInicio", "asc");
@@ -213,7 +213,7 @@ export async function updateClaseRecurrente(req: Request, res: Response, next: N
     if (b.fechaInicio !== undefined) patch.FechaInicio = b.fechaInicio || null;
     if (b.fechaFin !== undefined) patch.FechaFin = b.fechaFin || null;
     if (b.observaciones !== undefined) patch.Observaciones = b.observaciones;
-    if (b.activo !== undefined) patch.Activo = b.activo ? 1 : 0;
+    if (b.activo !== undefined) patch.Activo = b.activo ? true : false;
 
     // Sesiones (día/hora/aula): si vienen, reemplazan y la primera actualiza los campos legacy
     if (Array.isArray(b.sesiones)) {
@@ -252,7 +252,7 @@ export async function regenerarCitasClases(_req: Request, res: Response, next: N
         'CLASE', 'PROGRAMADA',
         cr."IdProfesional",
         'Generada desde la clase recurrente',
-        1
+        true
       FROM "ClaseHorarios" ch
       JOIN "ClasesRecurrentes" cr ON cr."IdClaseRecurrente" = ch."IdClaseRecurrente"
       LEFT JOIN "Aulas" a ON a."IdAula" = ch."IdAula"
@@ -260,7 +260,7 @@ export async function regenerarCitasClases(_req: Request, res: Response, next: N
       CROSS JOIN LATERAL (
         SELECT (date_trunc('week', CURRENT_DATE)::date + (ch."DiaSemana" - 1) + 7*semana) AS fecha
       ) f
-      WHERE ch."Activo" = 1 AND cr."Activo" = 1
+      WHERE ch."Activo" = true AND cr."Activo" = true
         AND (f.fecha + ch."HoraInicio")::timestamp >= CURRENT_DATE
     `);
     res.json({ success: true, generadas: result.rowCount ?? null });
@@ -273,7 +273,7 @@ export async function regenerarCitasClases(_req: Request, res: Response, next: N
 export async function deleteClaseRecurrente(req: Request, res: Response, next: NextFunction) {
   try {
     const id = Number(req.params.id);
-    await db("ClasesRecurrentes").where("IdClaseRecurrente", id).update({ Activo: 0 });
+    await db("ClasesRecurrentes").where("IdClaseRecurrente", id).update({ Activo: false });
     res.json({ success: true, message: "Clase desactivada" });
   } catch (e) {
     next(e);
@@ -330,7 +330,7 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
       .join("clientes as c", "m.IdCliente", "c.id")
       .leftJoin("cliente_persona as cp", "c.id", "cp.id_cliente")
       .join("ClasesGrupales as cg", "m.IdClaseGrupal", "cg.IdClaseGrupal")
-      .leftJoin("Servicios as s", "cg.IdServicio", "s.IdServicio")
+      .leftJoin("Servicios as s", "cg.IdInstrumento", "s.IdServicio")
       .leftJoin("Profesionales as p", "cg.IdProfesor", "p.IdProfesional")
       .select(
         "m.IdMatricula as id",
@@ -364,15 +364,15 @@ export async function getMatriculas(req: Request, res: Response, next: NextFunct
     }
     if (idServicio) {
       queryRecurrente.where("cr.IdServicio", idServicio);
-      queryGrupal.where("cg.IdServicio", idServicio);
+      queryGrupal.where("cg.IdInstrumento", idServicio);
     }
     if (idProfesional) {
       queryRecurrente.where("cr.IdProfesional", idProfesional);
       queryGrupal.where("cg.IdProfesor", idProfesional);
     }
     if (soloActivas) {
-      queryRecurrente.andWhere("m.Activo", 1);
-      queryGrupal.andWhere("m.Activo", 1);
+      queryRecurrente.andWhere("m.Activo", true);
+      queryGrupal.andWhere("m.Activo", true);
     }
 
     // Ejecutar ambas queries
@@ -403,7 +403,7 @@ export async function createMatricula(req: Request, res: Response, next: NextFun
 
     const clase = await db("ClasesRecurrentes")
       .where("IdClaseRecurrente", idClaseRecurrente)
-      .andWhere("Activo", 1)
+      .andWhere("Activo", true)
       .first();
     if (!clase) {
       res.status(404).json({ error: "La clase no existe o está inactiva" });
@@ -411,7 +411,7 @@ export async function createMatricula(req: Request, res: Response, next: NextFun
     }
 
     const dup = await db("Matriculas")
-      .where({ IdClaseRecurrente: idClaseRecurrente, IdCliente: idCliente, Activo: 1 })
+      .where({ IdClaseRecurrente: idClaseRecurrente, IdCliente: idCliente, Activo: true })
       .first();
     if (dup) {
       res.status(409).json({ error: "El alumno ya está matriculado en esta clase" });
@@ -419,7 +419,7 @@ export async function createMatricula(req: Request, res: Response, next: NextFun
     }
 
     const [{ count }] = await db("Matriculas")
-      .where({ IdClaseRecurrente: idClaseRecurrente, Activo: 1 })
+      .where({ IdClaseRecurrente: idClaseRecurrente, Activo: true })
       .count("* as count");
     if (Number(count) >= Number(clase.CapacidadMax)) {
       res.status(409).json({ error: "La clase está completa (sin plazas libres)" });
@@ -464,7 +464,7 @@ export async function deleteMatricula(req: Request, res: Response, next: NextFun
     const id = Number(req.params.id);
     await db("Matriculas")
       .where("IdMatricula", id)
-      .update({ Activo: 0, Estado: "BAJA", FechaBaja: db.raw("CURRENT_DATE") });
+      .update({ Activo: false, Estado: "BAJA", FechaBaja: db.raw("CURRENT_DATE") });
     res.json({ success: true, message: "Alumno dado de baja de la clase" });
   } catch (e) {
     next(e);
@@ -480,7 +480,7 @@ export async function getAsignaturas(_req: Request, res: Response, next: NextFun
   try {
     const rows = await db("Servicios")
       .select("IdServicio as id", "Nombre", "Descripcion")
-      .where("Activo", 1)
+      .where("Activo", true)
       .orderBy("Nombre", "asc");
     res.json({ data: rows, totalCount: rows.length });
   } catch (e) {
@@ -498,7 +498,7 @@ export async function createAsignatura(req: Request, res: Response, next: NextFu
       .insert({
         Nombre: String(req.body.nombre).trim(),
         Descripcion: req.body.descripcion ?? null,
-        Activo: 1,
+        Activo: true,
       })
       .returning("IdServicio");
     res.status(201).json({ id: typeof row === "object" ? row.IdServicio : row });
@@ -529,11 +529,11 @@ export async function deleteAsignatura(req: Request, res: Response, next: NextFu
   try {
     const id = Number(req.params.id);
     // Verificar que no esté en uso en clases
-    const enUso = await db("ClasesRecurrentes").where("IdServicio", id).andWhere("Activo", 1).first();
+    const enUso = await db("ClasesRecurrentes").where("IdServicio", id).andWhere("Activo", true).first();
     if (enUso) {
       return res.status(409).json({ error: "La asignatura está en uso en clases activas" });
     }
-    await db("Servicios").where("IdServicio", id).update({ Activo: 0 });
+    await db("Servicios").where("IdServicio", id).update({ Activo: false });
     res.json({ success: true });
   } catch (e) {
     next(e);
@@ -549,7 +549,7 @@ export async function getOpcionesEscola(_req: Request, res: Response, next: Next
   try {
     const instrumentos = await db("Servicios")
       .select("IdServicio as id", "Nombre")
-      .where("Activo", 1)
+      .where("Activo", true)
       .orderBy("Nombre", "asc");
 
     const profesores = await db("Profesionales")
@@ -565,7 +565,7 @@ export async function getOpcionesEscola(_req: Request, res: Response, next: Next
           `TRIM(CONCAT(COALESCE(cp.nombre, ''), ' ', COALESCE(cp.apellido1, ''), ' ', COALESCE(cp.apellido2, ''))) as "NombreCompleto"`
         )
       )
-      .where("c.activo", 1)
+      .where("c.activo", true)
       .orderBy("c.id", "asc");
 
     res.json({ instrumentos, profesores, alumnos });
