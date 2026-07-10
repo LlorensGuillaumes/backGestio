@@ -191,7 +191,7 @@ export async function matricularAlumnoClaseGrupal(req: Request, res: Response, n
     // Crear la matrícula
     const [row] = await db("Matriculas")
       .insert({
-        IdClaseRecurrente: null, // No está asociada a una clase recurrente
+        IdClaseGrupal: Number(b.idClaseGrupal),
         IdCliente: Number(b.idCliente),
         CuotaMensual: Number(b.cuotaMensual ?? 0),
         Estado: "ACTIVA",
